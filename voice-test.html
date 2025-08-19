@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Voices</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .nav {
+            margin-bottom: 30px;
+        }
+        .nav a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-text {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-style: italic;
+        }
+        .voice-controls {
+            margin: 20px 0;
+        }
+        .voice-option {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .voice-info {
+            font-size: 12px;
+            color: #666;
+            margin-left: 10px;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .status.error {
+            background: #ffe6e6;
+            color: #d00;
+        }
+        .status.success {
+            background: #e6ffe6;
+            color: #060;
+        }
+    </style>
+</head>
+<body>
+    <div class="nav">
+        <a href="index.html">← Back to Home</a>
+    </div>
+    
+    <h1>Test Voices</h1>
+    
+    <div class="test-text">
+        "The quick brown fox jumps over the lazy dog"
+    </div>
+    
+    <div class="voice-controls" id="voiceControls">
+        <p>Loading available voices...</p>
+    </div>
+    
+    <div id="status"></div>
+
+    <script>
+        let voices = [];
+        let synthesis = window.speechSynthesis;
+        
+        function loadVoices() {
+            voices = synthesis.getVoices();
+            displayVoices();
+        }
+        
+        function displayVoices() {
+            const container = document.getElementById('voiceControls');
+            const testText = "The quick brown fox jumps over the lazy dog";
+            
+            if (voices.length === 0) {
+                container.innerHTML = '<p>No voices available or still loading...</p>';
+                return;
+            }
+            
+            // Filter for English-US voices only
+            const filteredVoices = voices.filter(voice => {
+                const lang = voice.lang.toLowerCase();
+                return lang === 'en-us' || lang === 'en_us';
+            });
+            
+            if (filteredVoices.length === 0) {
+                container.innerHTML = '<p>No English-US voices found</p>';
+            } else {
+                container.innerHTML = '<h3>English-US voices:</h3>';
+                filteredVoices.forEach(voice => {
+                    const originalIndex = voices.indexOf(voice);
+                    const div = document.createElement('div');
+                    div.className = 'voice-option';
+                    div.innerHTML = `
+                        <strong>${voice.name}</strong>
+                        <span class="voice-info">(${voice.lang})</span>
+                        <button onclick="testVoice(${originalIndex})">Test Voice</button>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+        }
+        
+        function testVoice(voiceIndex) {
+            const voice = voices[voiceIndex];
+            const testText = "The quick brown fox jumps over the lazy dog";
+            
+            // Cancel any ongoing speech
+            synthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(testText);
+            utterance.voice = voice;
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+            
+            utterance.onstart = function() {
+                showStatus(`Speaking with ${voice.name}...`, 'success');
+            };
+            
+            utterance.onend = function() {
+                showStatus(`Finished speaking with ${voice.name}`, 'success');
+            };
+            
+            utterance.onerror = function(event) {
+                showStatus(`Error with ${voice.name}: ${event.error}`, 'error');
+            };
+            
+            synthesis.speak(utterance);
+        }
+        
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    status.textContent = '';
+                    status.className = '';
+                }, 3000);
+            }
+        }
+        
+        // Load voices when page loads
+        loadVoices();
+        
+        // Reload voices if they change (some browsers load them asynchronously)
+        if (synthesis.onvoiceschanged !== undefined) {
+            synthesis.onvoiceschanged = loadVoices;
+        }
+        
+        // Fallback to reload voices after a delay
+        setTimeout(loadVoices, 1000);
+    </script>
+</body>
+</html>
